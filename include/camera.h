@@ -11,8 +11,8 @@ typedef struct {
   Vector3 pixel00_loc;
   Vector3 pixel_delta_u;
   Vector3 pixel_delta_v;
-} jCamera;
+} camera_t;
 
-void initialise_camera(jCamera *camera, int screen_width, int screen_height);
+void initialise_camera(int screen_width, int screen_height, camera_t *camera);
 
 #endif

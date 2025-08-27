@@ -3,7 +3,7 @@
 #include "raylib.h"
 #include "raymath.h"
 
-static inline Vector3 ray_at(Ray ray, double t) {
+static inline Vector3 ray_at(ray_t ray, double t) {
   return Vector3Add(ray.position, Vector3Scale(ray.direction, t));
 }
 

@@ -1,6 +1,6 @@
 #include "camera.h"
 
-void initialise_camera(jCamera *camera, int screen_width, int screen_height) {
+void initialise_camera(int screen_width, int screen_height, camera_t *camera) {
   // Camera
   float focal_length = 1.0f;
   float viewport_height = 2.0f;

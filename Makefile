@@ -1,12 +1,12 @@
 # Compiler and flags
 CC := gcc
-CFLAGS := -Wall -Iinclude
-LDFLAGS := -lm -lraylib -lGL -lpthread -ldl -lrt -lX11   # for Linux/X11
+CFLAGS := -Wall -Iinclude -g 
+LDFLAGS := -lm -lraylib -lGL -lpthread -ldl -lrt -lX11 
 
 # Directories
 SRC_DIR := src
 BUILD_DIR := build
-BIN := $(BUILD_DIR)/app
+BIN := $(BUILD_DIR)/raytracer
 
 # Source and object files
 SRC := $(wildcard $(SRC_DIR)/*.c)
