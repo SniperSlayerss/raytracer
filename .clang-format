@@ -1,2 +1,45 @@
 Language: C
-ColumnLimit: 0
+BasedOnStyle: WebKit
+ColumnLimit: 150
+
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: Consecutive
+AlignOperands: Align
+AlignTrailingComments: true
+
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: false
+BinPackParameters: false
+
+BreakBeforeBraces: Linux
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: false
+SpacesInContainerLiterals: true
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+---
+
+Language: Cpp
+BasedOnStyle: WebKit
+ColumnLimit: 150
+
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: Consecutive
+AlignOperands: Align
+AlignTrailingComments: true
+
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: false
+BinPackParameters: false
+
+BreakBeforeBraces: Linux
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: false
+SpacesInContainerLiterals: true
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
