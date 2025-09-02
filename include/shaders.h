@@ -2,6 +2,7 @@
 #define SHADERS_H
 
 #include "raylib.h"
+#include "rlgl.h"
 
 #include "camera.h"
 #include "hittable.h"
@@ -14,6 +15,12 @@ typedef struct {
     bool  is_loaded;
 
     struct {
+	unsigned int compute_texture;
+        unsigned int accumulated_color_texture;
+	unsigned int sample_count_texture; 
+    } Textures;
+
+    struct {
         int loc_camera_center;
         int loc_viewport_u;
         int loc_viewport_v;
@@ -23,6 +30,7 @@ typedef struct {
         int loc_time;
         int loc_screen_width;
         int loc_screen_height;
+	int loc_reset_accumulation;
     } Uniforms;
 
     struct {
@@ -30,8 +38,9 @@ typedef struct {
     } SSBOs;
 } ComputeShader;
 
-bool shader_init_and_load(ComputeShader* compute, SceneData* scene);
-void shader_set_uniforms(ComputeShader* compute, camera_t* camera, int screen_width, int screen_height);
+bool shader_init_and_load(ComputeShader* compute, SceneData* scene, const int screen_width, const int screen_height);
+void shader_set_uniforms(ComputeShader* compute, camera_t* camera, const int screen_width, const int screen_height, float time, bool reset_accumulation);
 void shader_set_ssbos(ComputeShader* compute);
+void shader_bind_textures(ComputeShader* compute);
 
 #endif // SHADERS_H

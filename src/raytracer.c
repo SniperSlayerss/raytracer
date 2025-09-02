@@ -1,6 +1,9 @@
+#define GL_GLEXT_PROTOTYPES
+
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
+#include <GL/gl.h>
 
 #include "camera.h"
 #include "hittable.h"
@@ -19,36 +22,34 @@ void initialise_scene(SceneData* scene)
 
 int main()
 {
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | RL_OPENGL_43); // Request OpenGL 4.3 context
     // Initialise
     InitWindow(screen_width, screen_height, "Raytracer");
 
     camera_t camera = { 0 };
     initialise_camera(screen_width, screen_height, &camera);
 
-    SceneData    scene = { 0 };
+    SceneData scene = { 0 };
     initialise_scene(&scene);
 
     // Load compute shader
     ComputeShader compute = { 0 };
-    shader_init_and_load(&compute, &scene);
+    shader_init_and_load(&compute, &scene, screen_width, screen_height);
+    shader_bind_textures(&compute);
 
-    // Create texture to render compute shader on
-    unsigned int compute_texture = 0;
-    Image        blankImage      = GenImageColor(screen_width, screen_height, BLANK);
-    compute_texture              = rlLoadTexture(blankImage.data, screen_width, screen_height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
-    UnloadImage(blankImage);
+    bool reset_accumulation = false;
 
-    SetTargetFPS(0);
+    SetTargetFPS(60);
     while(!WindowShouldClose()) {
         rlEnableShader(compute.id);
 
-	shader_set_ssbos(&compute);
-	shader_set_uniforms(&compute, &camera, screen_width, screen_height);
+        shader_set_ssbos(&compute);
+        shader_set_uniforms(&compute, &camera, screen_width, screen_height, GetTime(), reset_accumulation);
 
-        // Allow compute shader to write to texture
-        rlBindImageTexture(compute_texture, 0, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, false);
         rlComputeShaderDispatch((screen_width + 7) / 8, (screen_height + 7) / 8, 1);
         rlDisableShader();
+
+        glTextureBarrier();
 
         // Draw
         BeginDrawing();
@@ -56,7 +57,7 @@ int main()
 
         Rectangle source = { 0, 0, screen_width, -screen_height };
         Rectangle dest   = { 0, 0, screen_width, screen_height };
-        DrawTexturePro((Texture2D) { compute_texture, screen_width, screen_height, 1, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 },
+        DrawTexturePro((Texture2D) { compute.Textures.compute_texture, screen_width, screen_height, 1, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 },
                        source,
                        dest,
                        (Vector2) { 0, 0 },
@@ -67,8 +68,12 @@ int main()
         EndDrawing();
     }
 
+    // Make function in shaders.c
     rlUnloadShaderProgram(compute.id);
-    rlUnloadTexture(compute_texture);
+    rlUnloadTexture(compute.Textures.compute_texture);
+    glDeleteTextures(1, &compute.Textures.accumulated_color_texture);
+    glDeleteTextures(1, &compute.Textures.sample_count_texture);
+    rlUnloadShaderBuffer(compute.SSBOs.scene_ssbo);
     CloseWindow();
     return 0;
 }
