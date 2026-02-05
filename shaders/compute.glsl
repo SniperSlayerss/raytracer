@@ -15,6 +15,7 @@ layout(rgba32f, binding = 1) uniform image2D imgAccumulatedColor;
 // Sample count buffer
 layout(r32ui, binding = 2) uniform uimage2D imgSampleCount;
 
+// ==================== Definitions ====================
 struct Interval {
     float min;
     float max;
@@ -58,11 +59,131 @@ uniform int screen_height;
 // When to reset accumulation
 uniform int reset_accumulation;
 
-float random(in vec2 _st) { return fract(sin(dot(_st.xy, vec2(12.9898, 78.233))) * 43758.5453123); }
+// ==================== Helper Functions  ====================
+float random_float(in vec2 st) {
+    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+}
 
-#include "interval.glsl"
-#include "ray.glsl"
+vec3 random_vec3(in vec2 st, float min_val, float max_val) {
+    vec3 rand = vec3(
+        random_float(st),
+        random_float(st + vec2(127.1, 311.7)),
+        random_float(st + vec2(269.5, 183.3))
+    );
+    return min_val + rand * (max_val - min_val);
+}
 
+// vec3 random_unit_vector(in vec2 st) {
+//     while (true) {
+//     }
+// }
+
+// ==================== Interval ====================
+float interval_size(Interval interval) { return interval.max - interval.min; }
+
+bool interval_contains(Interval interval, float x) { return interval.min <= x && x <= interval.max; }
+
+bool interval_surrounds(Interval interval, float x) { return interval.min < x && x < interval.max; }
+
+// ==================== RAY ====================
+vec3 ray_at_t(vec3 ray_origin, vec3 ray_dir, float t) { return ray_origin + t * ray_dir; }
+
+void get_surface_normal(vec3 ray_dir, vec3 outward_normal, out vec3 normal, out bool is_front_face)
+{
+    is_front_face = dot(ray_dir, outward_normal) < 0.0;
+    if(is_front_face) {
+        normal = outward_normal;
+    } else {
+        normal = -outward_normal;
+    }
+}
+
+bool hit_sphere(vec3 center, float radius, vec3 ray_origin, vec3 ray_dir, Interval ray_t, out HitRecord rec)
+{
+    vec3  oc = center - ray_origin;
+    float a  = dot(ray_dir, ray_dir);
+    float h  = dot(ray_dir, oc);
+    float c  = dot(oc, oc) - radius * radius;
+
+    float discriminant = h * h - a * c;
+    if(discriminant < 0) {
+        return false;
+    }
+
+    float sqrtd = sqrt(discriminant);
+
+    // Find the nearest root that lies in the acceptable range
+    float root = (h - sqrtd) / a;
+    if(!interval_surrounds(ray_t, root)) {
+        root = (h + sqrtd) / a;
+        if(!interval_surrounds(ray_t, root)) {
+            return false;
+        }
+    }
+
+    float t              = root;
+    vec3  p              = ray_at_t(ray_origin, ray_dir, t);
+    vec3  outward_normal = (p - center) / radius;
+
+    vec3 surface_normal;
+    bool is_front_face;
+    get_surface_normal(ray_dir, outward_normal, surface_normal, is_front_face);
+
+    rec.p      = p;
+    rec.normal = surface_normal;
+    rec.t      = t;
+    return true;
+}
+
+bool hit_object(HittableObject obj, vec3 ray_origin, vec3 ray_dir, Interval ray_t, out HitRecord rec)
+{
+    if(obj.type == SPHERE) {
+        return hit_sphere(obj.data1.xyz, obj.data1.w, ray_origin, ray_dir, ray_t, rec);
+    }
+    return false;
+}
+
+// Returns color
+vec3 ray_trace(vec3 ray_origin, vec3 ray_dir, Interval ray_t, out HitRecord rec, out bool did_hit)
+{
+    HitRecord temp_rec = HitRecord(vec3(0,0,0), vec3(0,0,0), -1.0);
+    HitRecord closest_rec = HitRecord(vec3(0.0), vec3(0.0), -1.0);
+    int       hit_index   = -1;
+
+    for (int i = 0; i < scene.object_count; i++) {
+	float max_t = (closest_rec.t < 0.0) ? ray_t.max : closest_rec.t;
+        if (hit_object(scene.objects[i], ray_origin, ray_dir,
+                       Interval(ray_t.min, max_t), temp_rec)) {
+            if (closest_rec.t < 0.0 || temp_rec.t < closest_rec.t) {
+                closest_rec = temp_rec;
+                hit_index = i;
+            }
+        }
+    }
+
+    did_hit = (hit_index != -1);
+    rec     = closest_rec;
+    return scene.objects[hit_index].data2.xyz;
+}
+
+vec3 ray_color(vec3 ray_origin, vec3 ray_dir)
+{
+    HitRecord rec = HitRecord(vec3(0,0,0), vec3(0,0,0), -1.0);
+    bool      did_hit = false;
+    vec3 color = ray_trace(ray_origin, ray_dir, Interval(0, 1.0 / 0.0), rec, did_hit);
+
+    if(did_hit) {
+        vec3 hit_point = ray_origin + rec.t * ray_dir;
+        // return color;
+        return 0.5 * vec3(rec.normal.x + 1, rec.normal.y + 1, rec.normal.z + 1);
+    } else {
+      	// Sky background
+	float a = 0.5 * (ray_dir.y + 1.0);
+	return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+    }
+}
+
+// ========================================
 void main()
 {
     // Get current pixel coordinates
@@ -77,11 +198,11 @@ void main()
     if(pixel.x >= size.x || pixel.y >= size.y)
         return;
 
-    // Generate two independent random numbers for x and y jitter, varying per pixel per frame
-    float x_offset = random(vec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y) * 1.337 + time) - 0.5; // Jitter between -0.5 and 0.5 pixel unit
-    float y_offset = random(vec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y) * 2.718 + time + 100.0) - 0.5; // Use a different seed for y-jitter
+    // Generate random numbers for x and y jitter, varying per pixel per frame
+    // Jitter between -0.5 and 0.5 pixel unit
+    vec3 offset = random_vec3(gl_GlobalInvocationID.xy + time, -0.5, 0.5);
 
-    vec3 pixel_sample_loc = pixel00_loc + (x + x_offset) * pixel_delta_u + (y + y_offset) * pixel_delta_v;
+    vec3 pixel_sample_loc = pixel00_loc + (x + offset.x) * pixel_delta_u + (y + offset.y) * pixel_delta_v;
     vec3 ray_dir      = normalize(pixel_sample_loc - camera_center);
 
     vec3 current_frame_color = ray_color(camera_center, ray_dir);

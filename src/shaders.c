@@ -10,7 +10,7 @@ bool shader_init_and_load(ComputeShader* compute, SceneData* scene, const int sc
     compute->is_loaded = false;
 
     // Load compute shader
-    char* shaderCode = LoadShaderWithIncludes(compute->name);
+    char* shaderCode = LoadFileText(compute->name);
     if(!shaderCode) {
         fprintf(stderr, "ERROR: Failed to get compute shader\n");
         return false;

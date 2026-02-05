@@ -68,7 +68,7 @@ int main()
         EndDrawing();
     }
 
-    // Make function in shaders.c
+    // TODO: Make function in shaders.c
     rlUnloadShaderProgram(compute.id);
     rlUnloadTexture(compute.Textures.compute_texture);
     glDeleteTextures(1, &compute.Textures.accumulated_color_texture);

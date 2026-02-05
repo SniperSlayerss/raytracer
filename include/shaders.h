@@ -6,7 +6,6 @@
 
 #include "camera.h"
 #include "hittable.h"
-#include "shader_parser.h"
 
 // For shaders/compute.glsl
 typedef struct {
@@ -17,7 +16,7 @@ typedef struct {
     struct {
 	unsigned int compute_texture;
         unsigned int accumulated_color_texture;
-	unsigned int sample_count_texture; 
+	unsigned int sample_count_texture;
     } Textures;
 
     struct {
